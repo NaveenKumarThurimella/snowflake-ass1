@@ -1,0 +1,64 @@
+
+---- TASK 1 External Stage s3--------------------------------------------
+
+create or replace TABLE NAVEEN.NAVEEN.PATIENT (
+	PATIENTID VARCHAR,
+	NAME VARCHAR,
+	DIAGNOSIS VARCHAR,
+	ADMISSIONDATE VARCHAR,
+	DISCHARGEDATE VARCHAR,
+	REGION VARCHAR,
+	AGE VARCHAR,
+	TOTALBILL VARCHAR,
+	INSURANCEPROVIDER VARCHAR,
+	STATUS VARCHAR
+);
+ 
+ 
+--Load Patient Data into Snowflake
+CREATE OR REPLACE FILE FORMAT my_csv_format TYPE=CSV
+FIELD_OPTIONALLY_ENCLOSED_BY='"'
+SKIP_HEADER=1;
+ 
+SELECT * FROM NAVEEN.NAVEEN.PATIENT;
+ 
+CREATE OR REPLACE STAGE patient_stage
+URL='s3://client-1-20240910/'
+CREDENTIALS=(AWS_KEY_ID='' AWS_SECRET_KEY='')
+DIRECTORY = (ENABLE = TRUE);
+ 
+ 
+COPY INTO NAVEEN.NAVEEN.PATIENT
+FROM @patient_stage
+FILE_FORMAT = (FORMAT_NAME = 'my_csv_format');
+
+
+
+------------------ TASK 2 materialized view-------------------------
+
+
+
+CREATE or replace TABLE PATIENT1 (
+    patient_id INT,
+    first_name STRING,
+    last_name STRING,
+    diagnosis STRING,
+    admission_date DATE,
+    discharge_date DATE,
+    address STRING
+);
+
+INSERT INTO PATIENT1 (patient_id, first_name, last_name, diagnosis, admission_date, discharge_date, address) VALUES
+(1, 'John', 'Doe', 'Flu', '2024-11-01', '2024-11-05', '123 Main St, Springfield'),
+(2, 'Jane', 'Smith', 'Pneumonia', '2024-11-10', '2024-11-20', '456 Elm St, Springfield'),
+(3, 'Alice', 'Johnson', 'Bronchitis', '2024-11-15', '2024-11-22', '789 Oak St, Springfield'),
+(4, 'Bob', 'Brown', 'Asthma', '2024-11-18', '2024-11-25', '101 Maple St, Springfield'),
+(5, 'Charlie', 'Davis', 'COVID-19', '2024-11-20', '2024-11-30', '202 Pine St, Springfield');
+
+CREATE or replace  MATERIALIZED VIEW AVGDiagnosis AS
+SELECT diagnosis, AVG(DATEDIFF(DAY, admission_date, discharge_date)) AS
+AvgStay
+FROM Patient
+GROUP BY Diagnosis;
+
+SELECT * FROM AVGDiagnosis;
