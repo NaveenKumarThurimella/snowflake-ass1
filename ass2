@@ -1,0 +1,90 @@
+------------------------------TASK 1 ------------------------------------
+
+CREATE  or replace TABLE Patient (
+    patient_id INT,
+    first_name STRING,
+    last_name STRING,
+    diagnosis STRING,
+    admission_date DATE,
+    discharge_date DATE,
+    address STRING
+);
+
+INSERT INTO Patient (patient_id, first_name, last_name, diagnosis, admission_date, discharge_date, address) VALUES
+(1, 'John', 'Doe', 'Flu', '2024-11-01', '2024-11-05', '123 Main St, Springfield'),
+(2, 'Jane', 'Smith', 'Pneumonia', '2024-11-10', '2024-11-20', '456 Elm St, Springfield'),
+(3, 'Alice', 'Johnson', 'Bronchitis', '2024-11-15', '2024-11-22', '789 Oak St, Springfield'),
+(4, 'Bob', 'Brown', 'Asthma', '2024-11-18', '2024-11-25', '101 Maple St, Springfield'),
+(5, 'Charlie', 'Davis', 'COVID-19', '2024-11-20', '2024-11-30', '202 Pine St, Springfield'),
+(9, 'Gamma', 'George', 'COVID-19', '2024-11-22', '2024-11-30', '202 Pine St, Springfield'),
+(10, 'Zeta', 'Zee', 'COVID-19', '2024-11-22', '2024-11-30', '202 Pine St, Springfield');
+
+select * from Patient ;
+
+create or replace stream Staging_PatientRecordsStream on table Patient;
+
+
+INSERT INTO Patient (patient_id, first_name, last_name, diagnosis, admission_date, discharge_date, address) VALUES
+
+(11, 'Gamma', 'George', 'COVID-19', '2024-11-22', '2024-11-30', '202 Pine St, Springfield'),
+(12, 'Zeta', 'Zee', 'COVID-19', '2024-11-22', '2024-11-30', '202 Pine St, Springfield'); //group by will create 1 record
+
+select * from Staging_PatientRecordsStream ;
+
+create or replace table Final_PatientRecords (diagnosis varchar, PatientCount int);
+
+
+create or replace task TASK_Staging_PatientRecords warehouse = 'COMPUTE_WH' schedule = '1 minute' when SYSTEM$STREAM_HAS_DATA('Staging_PatientRecordsStream') AS insert into Final_PatientRecords select diagnosis, count(*) as patientCount from Staging_PatientRecordsStream group by diagnosis;
+
+
+alter task TASK_Staging_PatientRecords resume;
+
+----- suspend after 5 min-------
+alter task TASK_Staging_PatientRecords suspend;
+
+
+select * from Staging_PatientRecordsStream ; --this should be empty
+
+select * from Final_PatientRecords; -- this should have 1 record
+
+
+
+-----------------------------------------------------------------------------------------------------TASK 2 -----------------------------------------------------------------------------------------------------------
+
+
+CREATE or replace TABLE Records (
+    patient_id INT,
+    first_name STRING,
+    last_name STRING,
+    diagnosis STRING,
+    admission_date DATE,
+    discharge_date DATE,
+    address STRING
+);
+
+INSERT INTO Records (patient_id, first_name, last_name, diagnosis, admission_date, discharge_date, address) VALUES
+(1, 'John', 'Doe', 'Flu', '2024-11-01', '2024-11-05', '123 Main St, Springfield'),
+(2, 'Jane', 'Smith', 'Pneumonia', '2024-11-10', '2024-11-20', '456 Elm St, Springfield'),
+(3, 'Alice', 'Johnson', 'Bronchitis', '2024-11-15', '2024-11-22', '789 Oak St, Springfield'),
+(4, 'Bob', 'Brown', 'Asthma', '2024-11-18', '2024-11-25', '101 Maple St, Springfield'),
+(6, 'Charlie', 'Davis', 'COVID-19', '2024-11-20', '2024-11-30', '202 Pine St, Springfield'),
+(7, 'John', 'Doe', 'Flu', '2024-11-01', '2024-11-05', '123 Main St, Springfield'),
+(8, 'Jane', 'Smith', 'Pneumonia', '2024-11-10', '2024-11-20', '456 Elm St, Springfield'),
+(9, 'Alice', 'Johnson', 'Bronchitis', '2024-11-15', '2024-11-22', '789 Oak St, Springfield'),
+(10, 'Bob', 'Brown', 'Asthma', '2024-11-18', '2024-11-25', '101 Maple St, Springfield'),
+(11, 'Charlie', 'Davis', 'COVID-19', '2024-11-20', '2024-11-30', '202 Pine St, Springfield'),
+(12, 'John', 'Doe', 'Flu', '2024-11-01', '2024-11-05', '123 Main St, Springfield'),
+(13, 'Jane', 'Smith', 'Pneumonia', '2024-11-10', '2024-11-20', '456 Elm St, Springfield'),
+(14, 'Alice', 'Johnson', 'Bronchitis', '2024-11-15', '2024-11-22', '789 Oak St, Springfield'),
+(15, 'Bob', 'Brown', 'Asthma', '2024-11-18', '2024-11-25', '101 Maple St, Springfield'),
+(16, 'Charlie', 'Davis', 'COVID-19', '2024-11-20', '2024-11-30', '202 Pine St, Springfield'),
+(17, 'John', 'Doe', 'Flu', '2024-11-01', '2024-11-05', '123 Main St, Springfield'),
+(18, 'Jane', 'Smith', 'Flu', '2024-11-10', '2024-11-20', '456 Elm St, Springfield'),
+(19, 'Alice', 'Johnson', 'Flu', '2024-11-15', '2024-11-22', '789 Oak St, Springfield'),
+(20, 'Bob', 'Brown', 'Flu', '2024-11-18', '2024-11-25', '101 Maple St, Springfield');
+
+SELECT Diagnosis, count(*) from Records where admission_date > '2024-06-01' group by diagnosis;   -- total query time (compile + execution ) -- 132ms
+
+alter table Records cluster by (admission_date); -- adding key
+
+SELECT Diagnosis, count(*) from Records where admission_date > '2024-06-01' group by diagnosis; -- total query time (compile + execution ) - 77ms
