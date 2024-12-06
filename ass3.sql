@@ -1,3 +1,5 @@
+----TASK 1
+
 CREATE TABLE PatientRecords (
     patient_id INT,
     patient_name STRING,
@@ -27,4 +29,39 @@ ALTER TABLE PatientRecords
 
 ALTER SESSION SET user_region = 'North';
 
+SELECT * FROM PatientRecords;
+
+
+---TASK2
+
+-- Step 1: Set Up the Original Table and Insert Data
+CREATE OR REPLACE TABLE PatientRecords (
+    PatientID INT,
+    Name STRING,
+    Diagnosis STRING,
+    AdmissionDate DATE
+);
+
+INSERT INTO PatientRecords (PatientID, Name, Diagnosis, AdmissionDate) VALUES
+(1, 'Alice', 'Flu', '2024-11-01'),
+(2, 'Bob', 'Cold', '2024-11-02'),
+(3, 'Charlie', 'Asthma', '2024-11-03');
+
+-- Step 2: Update Data in the Table (Simulate Changes)
+UPDATE PatientRecords
+SET Diagnosis = 'Pneumonia'
+WHERE PatientID = 1;
+
+-- Step 3: Clone the Table Using Time Travel
+-- Clone the table to capture the data before the update, specifying the offset in seconds (e.g., -60 for 60 seconds before the update)
+ -- Clones the table data 60 seconds before the update
+
+CREATE OR REPLACE TABLE PatientRecordsClone
+CLONE PatientRecords
+AT (OFFSET => -60);
+-- Step 4: Query the Clone and Compare
+-- Query the cloned data (historical snapshot)
+SELECT * FROM PatientRecordsClone;
+
+-- Query the original table (live data)
 SELECT * FROM PatientRecords;
